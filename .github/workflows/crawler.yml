@@ -29,6 +29,13 @@ jobs:
           fetch-depth: 1
           clean: true
 
+      - name: Checkout gh-pages for history
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          path: gh-pages-history
+        continue-on-error: true
+
       - name: Set up Python
         if: success()
         uses: actions/setup-python@v6
@@ -56,6 +63,22 @@ jobs:
         env:
           GITHUB_ACTIONS: true
         run: uv run python -m trendradar
+
+      - name: Merge with historical reports
+        if: success()
+        run: |
+          if [ -d gh-pages-history ]; then
+            # 把历史报告复制到 output/html（保留日期目录）
+            for dir in gh-pages-history/20*/; do
+              dir_name=$(basename "$dir")
+              if [ ! -d "output/html/$dir_name" ]; then
+                cp -r "$dir" "output/html/$dir_name"
+                echo "保留历史报告: $dir_name"
+              fi
+            done
+            # 保留根目录的 .nojekyll
+            [ -f gh-pages-history/.nojekyll ] && cp gh-pages-history/.nojekyll output/html/
+          fi
 
       - name: Deploy HTML report to GitHub Pages
         if: success()
