@@ -64,11 +64,33 @@ jobs:
           GITHUB_ACTIONS: true
         run: uv run python -m trendradar
 
+      - name: Add index page
+        if: success()
+        run: |
+          # 检测最新报告的实际文件名
+          LATEST_FILE=$(ls output/html/latest/ | grep '.html$' | head -1)
+          if [ -n "$LATEST_FILE" ]; then
+            cat > output/html/index.html << HTMLEOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0;url=latest/${LATEST_FILE}">
+            <title>TrendRadar 美食热点</title>
+          </head>
+          <body>
+            <p>正在跳转到最新热点报告...</p>
+            <p>如果没有自动跳转，请 <a href="latest/${LATEST_FILE}">点击这里</a></p>
+          </body>
+          </html>
+          HTMLEOF
+            echo "创建 index.html → latest/${LATEST_FILE}"
+          fi
+
       - name: Merge with historical reports
         if: success()
         run: |
           if [ -d gh-pages-history ]; then
-            # 把历史报告复制到 output/html（保留日期目录）
             for dir in gh-pages-history/20*/; do
               dir_name=$(basename "$dir")
               if [ ! -d "output/html/$dir_name" ]; then
@@ -76,7 +98,6 @@ jobs:
                 echo "保留历史报告: $dir_name"
               fi
             done
-            # 保留根目录的 .nojekyll
             [ -f gh-pages-history/.nojekyll ] && cp gh-pages-history/.nojekyll output/html/
           fi
 
